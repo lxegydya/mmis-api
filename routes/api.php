@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MenteeController;
 use App\Http\Controllers\MentorController;
 use App\Http\Controllers\ProgramController;
+use App\Models\ActivityType;
 use App\Models\Batch;
 use App\Models\Program;
 use Illuminate\Http\Request;
@@ -96,3 +99,20 @@ Route::post('/mentee/kick', [MenteeController::class, 'kickMentee']);
 Route::get('/groups', [GroupController::class, 'groups']);
 Route::post('/group/create', [GroupController::class, 'add']);
 Route::post('/group/{group_id}', [GroupController::class, 'detail']);
+
+
+// Activity
+Route::get('/activity', [ActivityController::class, 'activities']);
+Route::post('/activity/detail', [ActivityController::class, 'detail']);
+Route::get('/activity/dropdown-item', [ActivityController::class, 'dropdownItem']);
+Route::post('/activity/create', [ActivityController::class, 'add']);
+Route::post('/activity/update', [ActivityController::class, 'update']);
+Route::post('/activity/delete', [ActivityController::class, 'delete']);
+
+
+// Type
+Route::get('/type', [ActivityTypeController::class, 'types']);
+Route::post('/type/create', [ActivityTypeController::class, 'add']);
+Route::post('/type/detail', [ActivityTypeController::class, 'detail']);
+Route::post('/type/update', [ActivityTypeController::class, 'update']);
+Route::post('/type/delete', [ActivityTypeController::class, 'delete']);
