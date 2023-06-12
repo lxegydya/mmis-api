@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Program;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProgramController extends Controller
 {
@@ -75,7 +76,6 @@ class ProgramController extends Controller
                         ->where('programs.batch_id', $batch_id)
                         ->select('programs.*', 'batch.batch_name')
                         ->get();
-
         return response()->json(['data' => $programs]);
     }
 }
