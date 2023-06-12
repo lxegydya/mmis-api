@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MenteeController;
@@ -12,6 +14,7 @@ use App\Models\ActivityType;
 use App\Models\Batch;
 use App\Models\Program;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -116,3 +119,21 @@ Route::post('/type/create', [ActivityTypeController::class, 'add']);
 Route::post('/type/detail', [ActivityTypeController::class, 'detail']);
 Route::post('/type/update', [ActivityTypeController::class, 'update']);
 Route::post('/type/delete', [ActivityTypeController::class, 'delete']);
+
+
+// Absence
+Route::get('/super-admin/absence', [AbsenceController::class, 'superadminAbsence']);
+Route::post('/super-admin/absence/activities', [AbsenceController::class, 'superadminAbsenceActivities']);
+Route::post('/super-admin/absence/{activity_id}', [AbsenceController::class, 'getAbsenceList']);
+Route::post('/absence/input', [AbsenceController::class, 'inputAbsence']);
+
+
+// Assignment
+Route::get('/assignments', [AssignmentController::class, 'getAssignments']);
+Route::get('/assignment/program', [AssignmentController::class, 'getPrograms']);
+Route::get('/assignments/{program_id}', [AssignmentController::class, 'assignmentByProgram']);
+Route::get('/assignment/get/{assignment_id}', [AssignmentController::class, 'detail']);
+Route::get('/assignment/get-preparation-data', [AssignmentController::class, 'getPreparationData']);
+Route::post('/assignments/add', [AssignmentController::class, 'add']);
+Route::post('/assignments/update', [AssignmentController::class, 'update']);
+Route::post('/assignment/delete', [AssignmentController::class, 'delete']);
