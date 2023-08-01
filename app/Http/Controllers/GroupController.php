@@ -34,7 +34,7 @@ class GroupController extends Controller
                     ->where('groups.id', $group_id)
                     ->select([
                         'groups.*', 
-                        'mentor.fullname as mentor_name', 'mentor.skill as mentor_skill', 'mentor.image as mentor_image',
+                        'mentor.id as mentor_id', 'mentor.fullname as mentor_name', 'mentor.skill as mentor_skill', 'mentor.image as mentor_image',
                         'mentor.email as mentor_email', 'mentor.phone as mentor_phone',
                         'programs.program_name', 
                         'batch.batch_name'
@@ -42,6 +42,7 @@ class GroupController extends Controller
 
         $mentees = Mentee::where('group_id', $group_id)->get();
         $group->mentees = $mentees;
+        $group->assigned_mentor = $group->mentor_id;
 
         return response()->json(['data' => $group]);
     }
@@ -70,6 +71,22 @@ class GroupController extends Controller
                 'updated_at' => date_create()
             ]);
         }
+
+        return response()->json(['msg' => 'success']);
+    }
+
+    public function delete($group_id){
+        Group::where('id', $group_id)->delete();
+
+        return response()->json(['msg' => 'success']);
+    }
+
+    public function update(Request $request){
+        Group::where('id', $request->input('id'))
+            ->update([
+                'name' => $request->input('name'),
+                'updated_at' => date_create()
+            ]);
 
         return response()->json(['msg' => 'success']);
     }

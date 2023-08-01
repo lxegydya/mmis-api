@@ -21,7 +21,7 @@ class BatchController extends Controller
         return response()->json([
             'data' => [
                 'batch_total' => $batch_total,
-                'ongoing_batch' => $ongoing_batch->batch_name,
+                'ongoing_batch' => $ongoing_batch == null ? '-' : $ongoing_batch->batch_name,
                 'batches' => $batches
             ]
         ]);

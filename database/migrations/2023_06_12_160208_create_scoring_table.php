@@ -16,7 +16,6 @@ return new class extends Migration
             $table->unsignedBigInteger('assignment_id');
             $table->unsignedBigInteger('mentee_id');
             $table->float('score');
-            $table->string('status', 100)->nullable()->default('Not-Submitted');
             $table->timestamps();
 
             $table->foreign('assignment_id')->references('id')->on('assignment')->onDelete('cascade');

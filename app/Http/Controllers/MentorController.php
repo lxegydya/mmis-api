@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Mentor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
@@ -15,6 +16,11 @@ class MentorController extends Controller
 
         for($i=0; $i<count($mentors); $i++){
             $mentors[$i]['skill'] = array_map('trim', explode(',', $mentors[$i]['skill']));
+            $group_count = DB::table('mentor AS m')
+                ->leftJoin('groups AS g', 'm.id', '=', 'g.mentor_id')
+                ->where('g.mentor_id', $mentors[$i]->id)
+                ->count('g.id');
+            $mentors[$i]['group_count'] = $group_count;
         }
 
         return response()->json(['data' => $mentors]);
@@ -24,7 +30,7 @@ class MentorController extends Controller
         $mentor = $request->all(['fullname', 'email', 'phone', 'password', 'skill']);
         
         $mentor['created_at'] = date_create();
-        $mentor['password'] = hash('sha256', $mentor['password']);
+        $mentor['password'] = Crypt::encryptString($mentor['password']);
         $mentor['status'] = 'Active';
 
         if($request->hasFile('image')){
@@ -87,7 +93,9 @@ class MentorController extends Controller
             'updated_at' => date_create()
         ]);
 
-        return response()->json(['msg' => 'success']);
+        $mentor_data = Mentor::where('id', $mentor['mentor_id'])->first();
+
+        return response()->json(['msg' => 'success', 'data' => $mentor_data]);
     }
 
     public function delete($mentor_id){
@@ -95,12 +103,7 @@ class MentorController extends Controller
         File::delete(public_path($mentor['image']));
         $mentor->delete();
 
-        $mentors = Mentor::all();
-        for($i=0; $i<count($mentors); $i++){
-            $mentors[$i]['skill'] = array_map('trim', explode(',', $mentors[$i]['skill']));
-        }
-
-        return response()->json(['data' => $mentors]);
+        return response()->json(['msg' => 'success']);
     }
 
     public function getMentorNotInGroup($program_id){
@@ -109,5 +112,30 @@ class MentorController extends Controller
         );
 
         return response()->json(['data' => $mentees]);
+    }
+
+    public function resetPassword($mentor_id, Request $request){
+        $role = $request->input('role');
+        $mentor = Mentor::where('id', $mentor_id)->first();
+
+        if($role == 'mentor'){
+            if($request->input('password') == Crypt::decryptString($mentor->password)){
+                Mentor::where('id', $mentor_id)->update([
+                    'password' => Crypt::encryptString($request->input('new_password')),
+                    'updated_at' => date_create()
+                ]);
+
+                return response()->json(['result' => 'success', 'msg' => 'Password Changed Successfully!']);
+            }else{
+                return response()->json(['result' => 'fail', 'msg' => 'Old Password is not match!']);
+            }
+        }else{
+            Mentor::where('id', $mentor_id)->update([
+                'password' => Crypt::encryptString($request->input('new_password')),
+                'updated_at' => date_create()
+            ]);
+
+            return response()->json(['result' => 'success', 'msg' => 'Password Changed Successfully!']);
+        }
     }
 }

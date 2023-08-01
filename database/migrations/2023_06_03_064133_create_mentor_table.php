@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('fullname', 100);
             $table->string('email', 100);
-            $table->string('password', 100);
-            $table->string('phone', 20);
-            $table->text('skill');
+            $table->text('password');
+            $table->string('phone', 20)->nullable();
+            $table->text('skill')->nullable();
             $table->string('status', 100);
             $table->string('image', 100);
             $table->timestamps();

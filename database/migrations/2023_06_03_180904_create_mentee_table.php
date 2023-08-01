@@ -22,10 +22,10 @@ return new class extends Migration
             $table->string('phone', 14);
             $table->string('status', 100);
             $table->string('image', 100);
-            $table->unsignedBigInteger('group_id');
+            $table->unsignedBigInteger('group_id')->nullable();
             $table->timestamps();
 
-            $table->foreign('group_id')->references('id')->nullable()->on('groups')->onDelete('cascade');
+            $table->foreign('group_id')->references('id')->on('groups');
         });
     }
 

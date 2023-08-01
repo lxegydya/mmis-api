@@ -49,6 +49,27 @@ class AssignmentController extends Controller
         ]]);
     }
 
+    public function getProgramsByMentor(Request $request){
+        $mentor_id = $request->input('mentor_id');
+        $batches = Batch::all();
+        $programs = DB::table('programs AS p')
+            ->join('batch AS b', 'p.batch_id', '=', 'b.id')
+            ->join('groups AS g', function($join) use ($mentor_id){
+                $join->on('p.id', '=', 'g.program_id')
+                    ->where('g.mentor_id', '=', $mentor_id);
+            })->select(['p.program_name', 'p.id AS program_id', 'b.id', 'b.batch_name', 'p.program_status'])->get();
+
+        for($i=0; $i<count($programs); $i++){
+            $assignment_count = Assignment::where('program_id', $programs[$i]->program_id)->count();
+            $programs[$i]->assignment_count = $assignment_count;
+        }
+
+        return response()->json(['data' => [
+            'programs' => $programs,
+            'batches' => $batches
+        ]]);
+    }
+
     public function assignmentByProgram($program_id){
         $assignments = DB::table('assignment AS a')
                         ->join('programs AS p', 'a.program_id', '=', 'p.id')
@@ -65,10 +86,57 @@ class AssignmentController extends Controller
             $mentees_total = DB::table('mentee AS m')
                             ->join('groups AS g', 'm.group_id', '=', 'g.id')
                             ->join('programs AS p', 'g.program_id', 'p.id')
+                            ->where('p.id', $program_id)
                             ->count('m.id');
-            $mentees_count = Scoring::where('assignment_id', $assignments[$i]->id)
-                                ->where('status', '!=', 'Not-Submitted')
-                                ->count('mentee_id');
+
+            $mentees_count = DB::table('scoring AS s')
+                                ->where('assignment_id', $assignments[$i]->id)
+                                ->whereIn('s.mentee_id', DB::table('mentee AS m')
+                                    ->join('groups AS g', 'm.group_id', '=', 'g.id')
+                                    ->where('g.program_id', $program_id)
+                                    ->select(['m.id'])
+                                )->count('s.mentee_id');
+
+            $assignments[$i]->mentees_count = $mentees_count;
+            $assignments[$i]->mentees_total = $mentees_total;
+        }
+
+        return response()->json(['data' => [
+            'assignments' => $assignments,
+            'program' => $program,
+            'types' => $types
+        ]]);
+    }
+
+    public function assignmentByProgramMentor($program_id, Request $request){
+        $assignments = DB::table('assignment AS a')
+                        ->join('programs AS p', 'a.program_id', '=', 'p.id')
+                        ->join('assignment_type AS t', 'a.type_id', '=', 't.id')
+                        ->where('a.program_id', $program_id)
+                        ->select(['a.*', 'p.program_name', 't.type'])
+                        ->get();
+
+        $types = AssignmentType::all(['id', 'type']);
+        $program = Program::join('batch AS b', 'programs.batch_id', '=', 'b.id')
+            ->where('programs.id', $program_id)->select(['programs.*', 'b.batch_name'])->first();
+
+        for($i=0; $i<count($assignments); $i++){
+            $mentees_total = DB::table('mentee AS m')
+                            ->join('groups AS g', 'm.group_id', '=', 'g.id')
+                            ->join('programs AS p', 'g.program_id', 'p.id')
+                            ->where('p.id', $program_id)
+                            ->where('g.mentor_id', $request->input('mentor_id'))
+                            ->count('m.id');
+
+            $mentees_count = DB::table('scoring AS s')
+                                ->where('assignment_id', $assignments[$i]->id)
+                                ->whereIn('s.mentee_id', DB::table('mentee AS m')
+                                    ->join('groups AS g', 'm.group_id', '=', 'g.id')
+                                    ->where('g.mentor_id', $request->input('mentor_id'))
+                                    ->where('g.program_id', $program_id)
+                                    ->select(['m.id'])
+                                )->count('s.mentee_id');
+
             $assignments[$i]->mentees_count = $mentees_count;
             $assignments[$i]->mentees_total = $mentees_total;
         }

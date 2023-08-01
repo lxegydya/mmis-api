@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
 use App\Models\Program;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class ProgramController extends Controller
         $status = Program::distinct('program_status')->get('program_status');
         $programs = Program::join('batch', 'programs.batch_id', '=', 'batch.id')
             ->select('programs.*', 'batch.batch_name', 'batch.batch_status')->get();
+        $batch = Batch::all(['batch_name', 'batch_status']);
 
         $collected_categories = [];
         $collected_status = [];
@@ -42,7 +44,8 @@ class ProgramController extends Controller
             'ongoing_program' => $ongoing_program_total,
             'categories' => $collected_categories,
             'status' => $collected_status,
-            'programs' => $programs
+            'programs' => $programs,
+            'batches' => $batch
         ]]);
     }
 

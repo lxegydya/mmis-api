@@ -5,17 +5,24 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ActivityTypeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AssignmentTypeController;
 use App\Http\Controllers\BatchController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\MenteeController;
 use App\Http\Controllers\MentorController;
 use App\Http\Controllers\ProgramController;
+use App\Http\Controllers\ScoringController;
+use App\Models\Activity;
 use App\Models\ActivityType;
+use App\Models\Assignment;
 use App\Models\Batch;
+use App\Models\Mentee;
+use App\Models\Mentor;
 use App\Models\Program;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\Cookie;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,22 +42,47 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Auth
 Route::post('/login', [AdminController::class, 'login']);
 
-
 // Admin - Dashboard
-Route::get('admin/dashboard', function () {
+Route::get('admin/dashboard', function (Request $request) {
     $total_batch = Batch::count();
     $ongoing_batch = Batch::where('batch_status', 'Ongoing')->first();
-    $countdown_ongoing_batch = floor((strtotime($ongoing_batch['batch_end']) - time()) / 86400);
+    $countdown_ongoing_batch = $ongoing_batch == null ? '0' : ceil((strtotime($ongoing_batch['batch_end']) - time()) / 86400);
     $ongoing_program = Program::where('program_status', 'Ongoing')->count();
+    $active_mentee = Mentee::where('status', 'Active')->count();
+    $mentor = Mentor::count('fullname');
 
     return response()->json([
         'data' => [
             'total_batch' => $total_batch,
-            'ongoing_batch' => $ongoing_batch['batch_name'],
+            'ongoing_batch' => $ongoing_batch == null ? '' : $ongoing_batch['batch_name'],
             'countdown_ongoing_batch' => $countdown_ongoing_batch,
-            'ongoing_program' => $ongoing_program
+            'ongoing_program' => $ongoing_program,
+            'active_mentee' => $active_mentee,
+            'mentors' => $mentor
         ]
     ]);
+});
+
+// Mentor - Dashboard 
+Route::post('mentor/dashboard', function(Request $request){
+    $ongoing_batch = Batch::where('batch_status', 'Ongoing')->first();
+    $ongoing_program = Program::where('program_status', 'Ongoing')->count();
+    $mentor = Mentor::count('fullname');
+
+    $active_mentee = DB::table('mentee AS m')
+        ->join('groups AS g', function($join) use ($request){
+            $join->on('g.id', '=', 'm.group_id')
+                ->where('g.mentor_id', $request->input('mentor_id'));
+        })
+        ->where('m.status', 'Active')
+        ->count('m.id');
+
+    return response()->json(['data' => [
+        'ongoing_batch' => $ongoing_batch == null ? '' : $ongoing_batch['batch_name'],
+        'ongoing_program' => $ongoing_program,
+        'active_mentee' => $active_mentee,
+        'mentors' => $mentor
+    ]]);
 });
 
 
@@ -82,6 +114,7 @@ Route::post('/mentor/{mentor_id}/profile/set-profile-picture', [MentorController
 Route::post('/mentor/edit', [MentorController::class, 'edit']);
 Route::post('/mentor/delete/{mentor_id}', [MentorController::class, 'delete']);
 Route::post('/mentor/not-in-group/{program_id}', [MentorController::class, 'getMentorNotInGroup']);
+Route::post('/mentor/{mentor_id}/password/reset', [MentorController::class, 'resetPassword']);
 
 
 // Mentee
@@ -102,6 +135,8 @@ Route::post('/mentee/kick', [MenteeController::class, 'kickMentee']);
 Route::get('/groups', [GroupController::class, 'groups']);
 Route::post('/group/create', [GroupController::class, 'add']);
 Route::post('/group/{group_id}', [GroupController::class, 'detail']);
+Route::post('/group/edit/name', [GroupController::class, 'update']);
+Route::post('/group/delete/{group_id}', [GroupController::class, 'delete']);
 
 
 // Activity
@@ -122,11 +157,17 @@ Route::post('/type/delete', [ActivityTypeController::class, 'delete']);
 
 
 // Absence
-Route::get('/super-admin/absence', [AbsenceController::class, 'superadminAbsence']);
-Route::post('/super-admin/absence/activities', [AbsenceController::class, 'superadminAbsenceActivities']);
-Route::post('/super-admin/absence/{activity_id}', [AbsenceController::class, 'getAbsenceList']);
 Route::post('/absence/input', [AbsenceController::class, 'inputAbsence']);
 
+// Absence => Super Admin
+Route::get('/absence/list', [AbsenceController::class, 'superadminAbsence']);
+Route::post('/super-admin/absence/activities', [AbsenceController::class, 'superadminAbsenceActivities']);
+Route::post('/super-admin/absence/{activity_id}', [AbsenceController::class, 'getAbsenceList']);
+
+// Absence => Mentor
+Route::post('/absence/mentor/list', [AbsenceController::class, 'mentorAbsence']);
+Route::post('/absence/mentor/activities', [AbsenceController::class, 'mentorAbsenceActivities']);
+Route::post('/absence/mentor/activities/{activity_id}', [AbsenceController::class, 'absenceActivityDetail']);
 
 // Assignment
 Route::get('/assignments', [AssignmentController::class, 'getAssignments']);
@@ -137,3 +178,72 @@ Route::get('/assignment/get-preparation-data', [AssignmentController::class, 'ge
 Route::post('/assignments/add', [AssignmentController::class, 'add']);
 Route::post('/assignments/update', [AssignmentController::class, 'update']);
 Route::post('/assignment/delete', [AssignmentController::class, 'delete']);
+
+// Assignment => Mentor
+Route::post('/assignment/mentor/program', [AssignmentController::class, 'getProgramsByMentor']);
+Route::post('/assignments/mentor/program/{program_id}', [AssignmentController::class, 'assignmentByProgramMentor']);
+
+// Assignment Type
+Route::get('/assignment/type/get', [AssignmentTypeController::class, 'getAllType']);
+Route::get('/assignment/type/get/{type_id}', [AssignmentTypeController::class, 'getTypeById']);
+Route::post('/assignment/type/create', [AssignmentTypeController::class, 'add']);
+Route::post('/assignment/type/update', [AssignmentTypeController::class, 'update']);
+Route::post('/assignment/type/delete', [AssignmentTypeController::class, 'delete']);
+
+
+// Scoring
+Route::get('/scoring/get/{assignment_id}', [ScoringController::class, 'getScoringByAssignment']);
+Route::post('/scoring/appraise', [ScoringController::class, 'submitScore']);
+
+// Scoring => Mentor
+Route::post('/scoring/mentor/get/{assignment_id}', [ScoringController::class, 'getScoringByAssignmentMentor']);
+
+// Recap
+Route::get('/recap/get', function(){
+    $datas = DB::table('mentee AS m')
+        ->join('groups AS g', 'm.group_id', '=', 'g.id')
+        ->join('programs AS p', 'g.program_id', '=', 'p.id')
+        ->join('batch AS b', 'p.batch_id', '=', 'b.id')
+        ->join('mentor AS men', 'g.mentor_id', '=', 'men.id')
+        ->select([
+            'm.*', 'b.batch_name', 'p.id AS program_id', 'p.program_name', 
+            'g.name AS group_name', 'men.fullname AS mentor_name'
+        ])->get();
+
+    for($i=0; $i<count($datas); $i++){
+        $activity_count = Activity::where('program_id', $datas[$i]->program_id)->count();
+        $present_count = DB::table('absence AS a')
+            ->join('mentee AS m', 'a.mentee_id', '=', 'm.id')
+            ->join('activity AS ac', 'ac.id', '=', 'a.activity_id')
+            ->join('programs AS p', 'ac.program_id', '=', 'p.id')
+            ->where('p.id', '=', $datas[$i]->program_id)
+            ->where('m.id', '=', $datas[$i]->id)
+            ->groupBy('a.mentee_id')
+            ->count(['a.mentee_id']);
+        $datas[$i]->activity_count = $activity_count;
+        $datas[$i]->present_count = $present_count;
+
+        $assignment_count = Assignment::where('program_id', $datas[$i]->program_id)->count();
+        $joined_score_data = DB::table('scoring AS s')
+            ->join('mentee AS m', 's.mentee_id', '=', 'm.id')
+            ->join('assignment AS a', 's.assignment_id', '=', 'a.id')
+            ->join('programs AS p', 'a.program_id', '=', 'p.id')
+            ->where('p.id', '=', $datas[$i]->program_id)
+            ->where('m.id', '=', $datas[$i]->id)
+            ->groupBy('s.mentee_id');
+        $grade_count = $joined_score_data->count(['s.mentee_id']);
+        $mentee_score = $joined_score_data->sum('s.score');
+        $datas[$i]->scoring = [
+            'sum_score' => $mentee_score,
+            'count_graded' => $grade_count,
+            'count_assignment' => $assignment_count
+        ];
+    }
+
+    return response()->json(['data' => $datas]);
+});
+
+
+// Certificate
+Route::post('/certificate/score', [ScoringController::class, 'printCertificate']);
+Route::post('/certificate/absence', [AbsenceController::class, 'printCertificate']);
