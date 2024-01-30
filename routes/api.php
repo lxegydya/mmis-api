@@ -63,7 +63,7 @@ Route::get('admin/dashboard', function (Request $request) {
     ]);
 });
 
-// Mentor - Dashboard 
+// Mentor - Dashboard
 Route::post('mentor/dashboard', function(Request $request){
     $ongoing_batch = Batch::where('batch_status', 'Ongoing')->first();
     $ongoing_program = Program::where('program_status', 'Ongoing')->count();
@@ -163,6 +163,7 @@ Route::post('/absence/input', [AbsenceController::class, 'inputAbsence']);
 Route::get('/absence/list', [AbsenceController::class, 'superadminAbsence']);
 Route::post('/super-admin/absence/activities', [AbsenceController::class, 'superadminAbsenceActivities']);
 Route::post('/super-admin/absence/{activity_id}', [AbsenceController::class, 'getAbsenceList']);
+Route::get('/absence/{program_id}/export', [AbsenceController::class, 'export']);
 
 // Absence => Mentor
 Route::post('/absence/mentor/list', [AbsenceController::class, 'mentorAbsence']);
@@ -194,6 +195,7 @@ Route::post('/assignment/type/delete', [AssignmentTypeController::class, 'delete
 // Scoring
 Route::get('/scoring/get/{assignment_id}', [ScoringController::class, 'getScoringByAssignment']);
 Route::post('/scoring/appraise', [ScoringController::class, 'submitScore']);
+Route::get('/scoring/{program_id}/export', [ScoringController::class, 'export']);
 
 // Scoring => Mentor
 Route::post('/scoring/mentor/get/{assignment_id}', [ScoringController::class, 'getScoringByAssignmentMentor']);
@@ -206,7 +208,7 @@ Route::get('/recap/get', function(){
         ->join('batch AS b', 'p.batch_id', '=', 'b.id')
         ->join('mentor AS men', 'g.mentor_id', '=', 'men.id')
         ->select([
-            'm.*', 'b.batch_name', 'p.id AS program_id', 'p.program_name', 
+            'm.*', 'b.batch_name', 'p.id AS program_id', 'p.program_name',
             'g.name AS group_name', 'men.fullname AS mentor_name'
         ])->get();
 

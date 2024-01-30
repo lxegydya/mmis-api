@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ScoringExport;
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\Group;
@@ -11,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use setasign\Fpdi\Fpdi;
 
 class ScoringController extends Controller
@@ -23,7 +26,7 @@ class ScoringController extends Controller
             ->where('programs.id', $assignment->program_id)
             ->select(['programs.*', 'b.batch_name'])
             ->first();
-        
+
         $mentees = DB::table('mentee AS m')
             ->join('groups AS g', 'm.group_id', '=', 'g.id')
             ->where('g.program_id', $assignment->program_id)
@@ -49,7 +52,7 @@ class ScoringController extends Controller
             ->where('programs.id', $assignment->program_id)
             ->select(['programs.*', 'b.batch_name'])
             ->first();
-        
+
         $mentees = DB::table('mentee AS m')
             ->join('groups AS g', 'm.group_id', '=', 'g.id')
             ->join('mentor AS me', 'g.mentor_id', '=', 'me.id')
@@ -131,7 +134,7 @@ class ScoringController extends Controller
         if(is_file(public_path() . '/certificate/score/' . $filename)){
             File::delete(public_path('certificate/score/' . $filename));
         }
-        
+
         $this->fillPDF($master_template, $filename, $mentee_name, $grade, $score, $end);
 
         return response()->json(['link' => '/certificate/score/' . $filename]);
@@ -143,7 +146,7 @@ class ScoringController extends Controller
         $pdf->AddFont('Montserrat-Bold','','Montserrat-Bold.php');
         $pdf->AddFont('Montserrat-Light','','Montserrat-Light.php');
         $pdf->AddFont('Montserrat-SemiBold','','Montserrat-SemiBold.php');
-        
+
         $template = $pdf->importPage(1);
 
         $pdf->AddPage('L', 'A4');
@@ -175,5 +178,42 @@ class ScoringController extends Controller
         $pdf->Cell(0, 0, $end, 0, 1, 'L');
 
         $pdf->Output(public_path() . '/certificate/score/' . $filename, 'F');
+    }
+
+    public function export(Request $request, $program_id)
+    {
+        $program = Program::select('programs.program_name AS name', 'batch.batch_name AS batch')
+            ->join('batch', 'programs.batch_id', '=', 'batch.id')
+            ->where('programs.id', '=', $program_id)
+            ->first();
+
+        $assignment = Assignment::where('program_id', $program_id)->get();
+
+        $mentees = Scoring::select('mentee_id', 'mentee.name')
+            ->join('mentee', 'scoring.mentee_id', '=', 'mentee.id')
+            ->whereIn('assignment_id', Assignment::select('id')->where('program_id', $program_id))
+            ->groupBy('mentee_id')
+            ->get();
+
+        foreach($mentees as $index => $data){
+            $mentees[$index]['scoring_list'] = DB::table('assignment')
+                ->leftJoin('scoring', function($join) use ($data){
+                    $join->on('assignment.id','=','scoring.assignment_id')
+                        ->where('scoring.mentee_id', '=', $data['mentee_id']);
+                })
+                ->orderBy('assignment.id')
+                ->select('assignment.name', DB::raw('COALESCE(scoring.score, 0) as score'))
+                ->get();
+        }
+
+        $export = new ScoringExport($mentees);
+        $excelFile = 'exports\[Scoring] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
+        Excel::store($export, $excelFile);
+        $storagePath = Storage::path($excelFile);
+
+        return response()->download($storagePath, '[Scoring] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename=[Scoring] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx',
+        ])->deleteFileAfterSend(true);
     }
 }

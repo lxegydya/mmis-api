@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AbsenceExport;
 use App\Http\Controllers\Controller;
 use App\Models\Absence;
 use App\Models\Activity;
@@ -67,7 +70,7 @@ class AbsenceController extends Controller
                         ->join('groups AS g', 'g.mentor_id', '=', 'm.id')
                         ->join('programs AS p', 'g.program_id', '=', 'p.id')
                         ->select(['m.fullname'])->where('g.program_id', $programs[$i]->program_id)->get();
-            
+
             $programs[$i]->mentors = $mentors;
             $programs[$i]->mentees = $mentees;
             $programs[$i]->activities_count = $activities_count;
@@ -157,7 +160,7 @@ class AbsenceController extends Controller
 
         $program = Program::where('programs.id', $activity->program_id)
             ->join('batch AS b', 'programs.batch_id', '=', 'b.id')->first();
-        
+
         for($i=0; $i<count($groups); $i++){
             $mentees = DB::table('mentee AS m')
                 ->leftJoin('absence AS a', function($join) use ($activity_id) {
@@ -166,7 +169,7 @@ class AbsenceController extends Controller
                 })
                 ->where('m.group_id', $groups[$i]->id)
                 ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id']);
-            
+
             for($j=0; $j<count($mentees); $j++){
                 if($mentees[$j]->present == 1){
                     $mentees[$j]->present = true;
@@ -190,10 +193,10 @@ class AbsenceController extends Controller
             ->where('groups.mentor_id', $request->input('mentor_id'))
             ->join('mentor', 'groups.mentor_id', '=', 'mentor.id')
             ->get(['groups.id', 'groups.mentor_id', 'mentor.fullname', 'groups.name']);
-        
+
         $program = Program::where('programs.id', $activity->program_id)
             ->join('batch AS b', 'programs.batch_id', '=', 'b.id')->first();
-        
+
         for($i=0; $i<count($groups); $i++){
             $mentees = DB::table('mentee AS m')
                 ->leftJoin('absence AS a', function($join) use ($activity_id) {
@@ -202,7 +205,7 @@ class AbsenceController extends Controller
                 })
                 ->where('m.group_id', $groups[$i]->id)
                 ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id']);
-            
+
             for($j=0; $j<count($mentees); $j++){
                 if($mentees[$j]->present == 1){
                     $mentees[$j]->present = true;
@@ -270,7 +273,7 @@ class AbsenceController extends Controller
         $pdf->AddFont('Montserrat-Bold','','Montserrat-Bold.php');
         $pdf->AddFont('Montserrat-Light','','Montserrat-Light.php');
         $pdf->AddFont('Montserrat-SemiBold','','Montserrat-SemiBold.php');
-        
+
         $template = $pdf->importPage(1);
 
         $pdf->AddPage('L', 'A4');
@@ -296,5 +299,40 @@ class AbsenceController extends Controller
         $pdf->Cell(0, 0, $end, 0, 1, 'L');
 
         $pdf->Output(public_path() . '/certificate/absence/' . $filename, 'F');
+    }
+
+    public function export(Request $request, $program_id)
+    {
+        $program = Program::select('programs.program_name AS name', 'batch.batch_name AS batch')
+            ->join('batch', 'programs.batch_id', '=', 'batch.id')
+            ->where('programs.id', '=', $program_id)
+            ->first();
+
+        $mentees = Absence::select('mentee_id', 'mentee.name')
+            ->join('mentee', 'absence.mentee_id', '=', 'mentee.id')
+            ->whereIn('activity_id', Activity::select('id')->where('program_id', $program_id))
+            ->groupBy('mentee_id')
+            ->get();
+
+        foreach($mentees as $index => $data){
+            $mentees[$index]['absence_list'] = DB::table('activity')
+                ->leftJoin('absence', function($join) use ($data){
+                    $join->on('activity.id','=','absence.activity_id')
+                        ->where('absence.mentee_id', '=', $data['mentee_id']);
+                })
+                ->orderBy('activity.id')
+                ->select('activity.name', DB::raw('COALESCE(absence.present, 0) as present'))
+                ->get();
+        }
+
+        $export = new AbsenceExport($mentees);
+        $excelFile = 'exports\[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
+        Excel::store($export, $excelFile);
+        $storagePath = Storage::path($excelFile);
+
+        return response()->download($storagePath, '[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename=[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx',
+        ])->deleteFileAfterSend(true);
     }
 }
