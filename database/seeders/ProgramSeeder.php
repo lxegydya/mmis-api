@@ -13,23 +13,22 @@ class ProgramSeeder extends Seeder
      */
     public function run(): void
     {
-        Program::insert([
-            [
-                'program_name' => 'Web Development Fullstack',
-                'program_desc' => 'lorem ipsum dolor sit amet',
+        Program::create([
+                'program_name' => 'Fullstack Web Development',
+                'program_desc' => 'Kuy buat website!',
                 'program_categorie' => 'Coding',
                 'program_status' => 'Ongoing',
                 'batch_id' => 1,
                 'created_at' => date_create()
-            ],
-            [
-                'program_name' => 'UI/UX',
-                'program_desc' => 'lorem ipsum dolor sit amet',
-                'program_categorie' => 'Design',
-                'program_status' => 'Ongoing',
-                'batch_id' => 1,
-                'created_at' => date_create()
-            ]
+            ]);
+
+        Program::create([
+            'program_name' => 'Mobile Development',
+            'program_desc' => 'Mobile? Kuy atuh!',
+            'program_categorie' => 'Coding',
+            'program_status' => 'Ongoing',
+            'batch_id' => 1,
+            'created_at' => date_create()
         ]);
     }
 }
