@@ -308,11 +308,21 @@ class AbsenceController extends Controller
             ->where('programs.id', '=', $program_id)
             ->first();
 
+        if($request->input('mentor_id') == null){
         $mentees = Absence::select('mentee_id', 'mentee.name')
             ->join('mentee', 'absence.mentee_id', '=', 'mentee.id')
             ->whereIn('activity_id', Activity::select('id')->where('program_id', $program_id))
             ->groupBy('mentee_id')
             ->get();
+        }else{
+            $mentees = Absence::select('mentee_id', 'mentee.name')
+            ->join('mentee', 'absence.mentee_id', '=', 'mentee.id')
+            ->join('groups', 'mentee.group_id', '=', 'groups.id')
+            ->whereIn('activity_id', Activity::select('id')->where('program_id', $program_id))
+            ->where('groups.mentor_id', '=', $request->input('mentor_id'))
+            ->groupBy('mentee_id')
+            ->get();
+        }
 
         foreach($mentees as $index => $data){
             $mentees[$index]['absence_list'] = DB::table('activity')

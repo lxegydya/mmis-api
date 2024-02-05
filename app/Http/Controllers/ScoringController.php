@@ -189,11 +189,21 @@ class ScoringController extends Controller
 
         $assignment = Assignment::where('program_id', $program_id)->get();
 
+        if($request->input('mentor_id') == null){
         $mentees = Scoring::select('mentee_id', 'mentee.name')
             ->join('mentee', 'scoring.mentee_id', '=', 'mentee.id')
             ->whereIn('assignment_id', Assignment::select('id')->where('program_id', $program_id))
             ->groupBy('mentee_id')
             ->get();
+        }else{
+            $mentees = Scoring::select('mentee_id', 'mentee.name')
+            ->join('mentee', 'scoring.mentee_id', '=', 'mentee.id')
+            ->join('groups', 'mentee.group_id', '=', 'groups.id')
+            ->whereIn('assignment_id', Assignment::select('id')->where('program_id', $program_id))
+            ->where('groups.mentor_id', '=', $request->input('mentor_id'))
+            ->groupBy('mentee_id')
+            ->get();
+        }
 
         foreach($mentees as $index => $data){
             $mentees[$index]['scoring_list'] = DB::table('assignment')
