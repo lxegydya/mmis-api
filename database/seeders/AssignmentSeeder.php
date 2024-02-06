@@ -13,13 +13,20 @@ class AssignmentSeeder extends Seeder
      */
     public function run(): void
     {
-        Assignment::insert([
-            "name" => "Chapter 1-1: Rangkuman", 
-            "description" => "Membuat rangkuman terkait materi Chapter 1 yang telah dipelajari saat Self Learning Minggu Pertama", 
-            "program_id" => 1, 
-            "type_id" => 1, 
-            "deadline" => "2023-02-22", 
-            "created_at" => date_create()
+        Assignment::create([
+            "name" => "Chapter #1: Bagian 1",
+            "description" => "Membuat rangkuman terkait materi Chapter 1 yang telah dipelajari saat Self Learning Minggu Pertama",
+            "program_id" => 1,
+            "type_id" => 1,
+            "deadline" => "2023-02-21"
+        ]);
+
+        Assignment::create([
+            "name" => "Chapter #1: Bagian 2",
+            "description" => "Membuat rangkuman terkait materi Chapter 1 yang telah dipelajari saat Self Learning Minggu Pertama",
+            "program_id" => 1,
+            "type_id" => 1,
+            "deadline" => "2023-02-21"
         ]);
     }
 }

@@ -13,12 +13,10 @@ class ActivityTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        ActivityType::insert([
-            ['type' => 'Onboarding', 'created_at' => date_create()],
-            ['type' => 'Weekly Discussion', 'created_at' => date_create()],
-            ['type' => 'Forum Group Discussion', 'created_at' => date_create()],
-            ['type' => 'Webinar', 'created_at' => date_create()],
-            ['type' => 'Pretest', 'created_at' => date_create()]
-        ]);
+        ActivityType::create(['type' => 'Onboarding']);
+        ActivityType::create(['type' => 'Weekly Discussion']);
+        ActivityType::create(['type' => 'Forum Group Discussion']);
+        ActivityType::create(['type' => 'Webinar']);
+        ActivityType::create(['type' => 'Pretest']);
     }
 }

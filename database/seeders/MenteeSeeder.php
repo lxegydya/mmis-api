@@ -24,8 +24,7 @@ class MenteeSeeder extends Seeder
             'phone' => '0895350923656',
             'status' => 'Active',
             'image' => 'uploads/mentees/profile_picture/default-profile.jpg',
-            'group_id' => null,
-            'created_at' => date_create()
+            'group_id' => 1
         ]);
 
         Mentee::create([
@@ -39,8 +38,7 @@ class MenteeSeeder extends Seeder
             'phone' => '081314044804',
             'status' => 'Active',
             'image' => 'uploads/mentees/profile_picture/default-profile.jpg',
-            'group_id' => null,
-            'created_at' => date_create()
+            'group_id' => 1
         ]);
 
         Mentee::create([
@@ -54,8 +52,7 @@ class MenteeSeeder extends Seeder
             'phone' => '087848347917',
             'status' => 'Active',
             'image' => 'uploads/mentees/profile_picture/default-profile.jpg',
-            'group_id' => null,
-            'created_at' => date_create()
+            'group_id' => 1
         ]);
 
         Mentee::create([
@@ -69,8 +66,7 @@ class MenteeSeeder extends Seeder
             'phone' => '089629052002',
             'status' => 'Active',
             'image' => 'uploads/mentees/profile_picture/default-profile.jpg',
-            'group_id' => null,
-            'created_at' => date_create()
+            'group_id' => 1
         ]);
 
         Mentee::create([
@@ -84,8 +80,7 @@ class MenteeSeeder extends Seeder
             'phone' => '085207314444',
             'status' => 'Active',
             'image' => 'uploads/mentees/profile_picture/default-profile.jpg',
-            'group_id' => null,
-            'created_at' => date_create()
+            'group_id' => 1
         ]);
     }
 }

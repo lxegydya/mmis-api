@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('activity_id');
             $table->unsignedBigInteger('mentee_id');
             $table->boolean('present')->nullable()->default(false);
+            $table->string('information')->nullable();
             $table->timestamps();
 
             $table->foreign('activity_id')->references('id')->on('activity')->onDelete('cascade');

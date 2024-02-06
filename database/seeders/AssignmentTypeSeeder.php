@@ -13,12 +13,10 @@ class AssignmentTypeSeeder extends Seeder
      */
     public function run(): void
     {
-        AssignmentType::insert([
-            ["type" => 'LMS', "created_at" => date_create()],
-            ["type" => 'Webinar', "created_at" => date_create()],
-            ["type" => 'Forum Group Discussion', "created_at" => date_create()],
-            ["type" => 'Pre-Test', "created_at" => date_create()],
-            ["type" => 'Certification', "created_at" => date_create()]
-        ]);
+        AssignmentType::create(["type" => 'LMS']);
+        AssignmentType::create(["type" => 'Webinar']);
+        AssignmentType::create(["type" => 'Forum Group Discussion']);
+        AssignmentType::create(["type" => 'Pre-Test']);
+        AssignmentType::create(["type" => 'Certification']);
     }
 }
