@@ -204,7 +204,7 @@ class AbsenceController extends Controller
                         ->where('a.activity_id', $activity_id);
                 })
                 ->where('m.group_id', $groups[$i]->id)
-                ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id']);
+                ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id', 'a.information']);
 
             for($j=0; $j<count($mentees); $j++){
                 if($mentees[$j]->present == 1){
@@ -231,6 +231,7 @@ class AbsenceController extends Controller
                     'activity_id' => $request->input('activity_id'),
                     'mentee_id' => $absence_list[$i]['id'],
                     'present' => $absence_list[$i]['present'],
+                    'information' => $absence_list[$i]['information'],
                     'created_at' => date_create()
                 ]);
             }else{
@@ -239,6 +240,7 @@ class AbsenceController extends Controller
                     'activity_id' => $request->input('activity_id'),
                     'mentee_id' => $absence_list[$i]['id'],
                     'present' => $absence_list[$i]['present'],
+                    'information' => $absence_list[$i]['information'],
                     'updated_at' => date_create()
                 ]);
             }
