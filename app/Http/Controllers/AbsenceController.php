@@ -168,7 +168,7 @@ class AbsenceController extends Controller
                         ->where('a.activity_id', $activity_id);
                 })
                 ->where('m.group_id', $groups[$i]->id)
-                ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id']);
+                ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id', 'a.information']);
 
             for($j=0; $j<count($mentees); $j++){
                 if($mentees[$j]->present == 1){
