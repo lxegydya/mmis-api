@@ -220,6 +220,7 @@ Route::get('/recap/get', function(){
             ->join('programs AS p', 'ac.program_id', '=', 'p.id')
             ->where('p.id', '=', $datas[$i]->program_id)
             ->where('m.id', '=', $datas[$i]->id)
+            ->where('a.present', '=', 1)
             ->groupBy('a.mentee_id')
             ->count(['a.mentee_id']);
         $datas[$i]->activity_count = $activity_count;

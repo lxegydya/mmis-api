@@ -92,8 +92,8 @@ class MenteeController extends Controller
                     $join->on('a.id', '=', 'ab.activity_id')
                         ->where('ab.mentee_id', $mentee_id);
                 })->where('a.program_id', $program_assigned->id)
-                ->get(['a.id AS activity_id', 'a.name', 'a.date', 'ab.id AS absence_id', 'ab.present']);
-            
+                ->get(['a.id AS activity_id', 'a.name', 'a.date', 'ab.id AS absence_id', 'ab.present', 'ab.information']);
+
             for($i = 0; $i < count($absence_data); $i++){
                 if($absence_data[$i]->present == 1){
                     $absence_data[$i]->present = true;
@@ -110,7 +110,7 @@ class MenteeController extends Controller
         $mentee->group_assigned = $group_assigned;
         $mentee->scoring_data = $scoring_data;
         $mentee->absence_data = $absence_data;
-        
+
         return response()->json(['data' => $mentee]);
     }
 
@@ -182,9 +182,9 @@ class MenteeController extends Controller
         $group_id = $request->input('group_id');
         $mentees = $request->input('mentees');
 
-        for ($i=0; $i < count($mentees); $i++) { 
+        for ($i=0; $i < count($mentees); $i++) {
             Mentee::where('id', $mentees[$i])
-                ->update(['group_id' => $group_id]);   
+                ->update(['group_id' => $group_id]);
         }
 
         return response()->json(['msg' => 'success']);
