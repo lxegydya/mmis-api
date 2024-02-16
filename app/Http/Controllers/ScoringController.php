@@ -6,6 +6,7 @@ use App\Exports\ScoringExport;
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use App\Models\Group;
+use App\Models\Mentee;
 use App\Models\Program;
 use App\Models\Scoring;
 use Illuminate\Http\Request;
@@ -187,29 +188,26 @@ class ScoringController extends Controller
             ->where('programs.id', '=', $program_id)
             ->first();
 
-        $assignment = Assignment::where('program_id', $program_id)->get();
-
         if($request->input('mentor_id') == null){
-        $mentees = Scoring::select('mentee_id', 'mentee.name')
-            ->join('mentee', 'scoring.mentee_id', '=', 'mentee.id')
-            ->whereIn('assignment_id', Assignment::select('id')->where('program_id', $program_id))
-            ->groupBy('mentee_id')
-            ->get();
+            $mentees = Mentee::select('mentee.id', 'mentee.name')
+                ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
+                ->leftJoin('scoring', 'mentee.id', '=', 'scoring.mentee_id')
+                ->groupBy('mentee.id')
+                ->get();
         }else{
-            $mentees = Scoring::select('mentee_id', 'mentee.name')
-            ->join('mentee', 'scoring.mentee_id', '=', 'mentee.id')
-            ->join('groups', 'mentee.group_id', '=', 'groups.id')
-            ->whereIn('assignment_id', Assignment::select('id')->where('program_id', $program_id))
-            ->where('groups.mentor_id', '=', $request->input('mentor_id'))
-            ->groupBy('mentee_id')
-            ->get();
+            $mentees = Mentee::select('mentee.id', 'mentee.name')
+                ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
+                ->whereIn('group_id', Group::select('id')->where('mentor_id', $request->input('mentor_id')))
+                ->leftJoin('scoring', 'mentee.id', '=', 'scoring.mentee_id')
+                ->groupBy('mentee.id')
+                ->get();
         }
 
         foreach($mentees as $index => $data){
             $mentees[$index]['scoring_list'] = DB::table('assignment')
                 ->leftJoin('scoring', function($join) use ($data){
                     $join->on('assignment.id','=','scoring.assignment_id')
-                        ->where('scoring.mentee_id', '=', $data['mentee_id']);
+                        ->where('scoring.mentee_id', '=', $data['id']);
                 })
                 ->orderBy('assignment.id')
                 ->select('assignment.name', DB::raw('COALESCE(scoring.score, 0) as score'))

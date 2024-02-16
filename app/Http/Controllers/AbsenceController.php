@@ -311,26 +311,25 @@ class AbsenceController extends Controller
             ->first();
 
         if($request->input('mentor_id') == null){
-        $mentees = Absence::select('mentee_id', 'mentee.name')
-            ->join('mentee', 'absence.mentee_id', '=', 'mentee.id')
-            ->whereIn('activity_id', Activity::select('id')->where('program_id', $program_id))
-            ->groupBy('mentee_id')
-            ->get();
+            $mentees = Mentee::select('mentee.id', 'mentee.name')
+                ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
+                ->leftJoin('absence', 'mentee.id', '=', 'absence.mentee_id')
+                ->groupBy('mentee.id')
+                ->get();
         }else{
-            $mentees = Absence::select('mentee_id', 'mentee.name')
-            ->join('mentee', 'absence.mentee_id', '=', 'mentee.id')
-            ->join('groups', 'mentee.group_id', '=', 'groups.id')
-            ->whereIn('activity_id', Activity::select('id')->where('program_id', $program_id))
-            ->where('groups.mentor_id', '=', $request->input('mentor_id'))
-            ->groupBy('mentee_id')
-            ->get();
+            $mentees = Mentee::select('mentee.id', 'mentee.name')
+                ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
+                ->whereIn('group_id', Group::select('id')->where('mentor_id', $request->input('mentor_id')))
+                ->leftJoin('absence', 'mentee.id', '=', 'absence.mentee_id')
+                ->groupBy('mentee.id')
+                ->get();
         }
 
         foreach($mentees as $index => $data){
             $mentees[$index]['absence_list'] = DB::table('activity')
                 ->leftJoin('absence', function($join) use ($data){
                     $join->on('activity.id','=','absence.activity_id')
-                        ->where('absence.mentee_id', '=', $data['mentee_id']);
+                        ->where('absence.mentee_id', '=', $data['id']);
                 })
                 ->orderBy('activity.id')
                 ->select('activity.name', DB::raw('COALESCE(absence.present, 0) as present'))
