@@ -215,7 +215,7 @@ class ScoringController extends Controller
         }
 
         $export = new ScoringExport($mentees);
-        $excelFile = 'exports\[Scoring] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
+        $excelFile = 'exports/[Scoring] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
         Excel::store($export, $excelFile);
         $storagePath = Storage::path($excelFile);
 

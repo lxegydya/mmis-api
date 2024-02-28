@@ -337,7 +337,7 @@ class AbsenceController extends Controller
         }
 
         $export = new AbsenceExport($mentees);
-        $excelFile = 'exports\[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
+        $excelFile = 'exports/[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
         Excel::store($export, $excelFile);
         $storagePath = Storage::path($excelFile);
 
