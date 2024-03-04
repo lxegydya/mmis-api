@@ -95,7 +95,7 @@ class AssignmentController extends Controller
                                     ->join('groups AS g', 'm.group_id', '=', 'g.id')
                                     ->where('g.program_id', $program_id)
                                     ->select(['m.id'])
-                                )->count('s.mentee_id');
+                                )->distinct()->count('s.mentee_id');
 
             $assignments[$i]->mentees_count = $mentees_count;
             $assignments[$i]->mentees_total = $mentees_total;
@@ -135,7 +135,7 @@ class AssignmentController extends Controller
                                     ->where('g.mentor_id', $request->input('mentor_id'))
                                     ->where('g.program_id', $program_id)
                                     ->select(['m.id'])
-                                )->count('s.mentee_id');
+                                )->distinct()->count('s.mentee_id');
 
             $assignments[$i]->mentees_count = $mentees_count;
             $assignments[$i]->mentees_total = $mentees_total;

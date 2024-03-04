@@ -36,7 +36,8 @@ class ScoringController extends Controller
                 $join->on('m.id', '=', 's.mentee_id')
                     ->where('s.assignment_id', $assignment_id);
                 })
-            ->get(['m.id', 'm.name', 'm.major', 'm.status', 'g.name AS group_name', 'me.fullname', 's.score', 's.id AS scoring_id']);
+            ->select('m.id', 'm.name', 'm.major', 'm.status', 'g.name AS group_name', 'me.fullname', 's.score', 's.id AS scoring_id')
+            ->distinct()->get();
 
         return response()->json(['data' => [
             'assignment' => $assignment,
@@ -57,13 +58,15 @@ class ScoringController extends Controller
         $mentees = DB::table('mentee AS m')
             ->join('groups AS g', 'm.group_id', '=', 'g.id')
             ->join('mentor AS me', 'g.mentor_id', '=', 'me.id')
-            ->leftJoin('scoring AS s', function($join) use ($assignment_id) {
-                $join->on('m.id', '=', 's.mentee_id')
-                    ->where('s.assignment_id', $assignment_id);
+            ->leftJoin(DB::raw("(SELECT id, mentee_id, score, assignment_id FROM scoring GROUP BY mentee_id, assignment_id) AS s"),
+                function($join) use ($assignment_id) {
+                    $join->on('m.id', '=', 's.mentee_id')
+                        ->where('s.assignment_id', $assignment_id);
                 })
             ->where('g.program_id', $assignment->program_id)
             ->where('g.mentor_id', $request->input('mentor_id'))
-            ->get(['m.id', 'm.name', 'm.major', 'm.status', 'g.name AS group_name', 'me.fullname', 's.score', 's.id AS scoring_id']);
+            ->select('m.id', 'm.name', 'm.major', 'm.status', 'g.name AS group_name', 'me.fullname', 's.score', 's.id AS scoring_id')
+            ->get();
 
         return response()->json(['data' => [
             'assignment' => $assignment,
@@ -73,21 +76,22 @@ class ScoringController extends Controller
     }
 
     public function submitScore(Request $request){
-        if($request->input('scoring_id') == null){
+        $existingScoring = Scoring::where('assignment_id', $request->input('assignment_id'))
+            ->where('mentee_id', $request->input('mentee_id'))
+            ->first();
+
+        if($existingScoring) {
+            $existingScoring->update([
+                'score' => $request->input('score'),
+                'updated_at' => now()
+            ]);
+        } else {
             Scoring::insert([
                 'assignment_id' => $request->input('assignment_id'),
                 'mentee_id' => $request->input('mentee_id'),
                 'score' => $request->input('score'),
-                'created_at' => date_create()
+                'created_at' => now()
             ]);
-        }else{
-            Scoring::where('id', $request->input('scoring_id'))
-                ->update([
-                    'assignment_id' => $request->input('assignment_id'),
-                    'mentee_id' => $request->input('mentee_id'),
-                    'score' => $request->input('score'),
-                    'updated_at' => date_create()
-                ]);
         }
 
         return response()->json(['msg' => 'success']);

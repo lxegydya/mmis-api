@@ -104,7 +104,7 @@ class AbsenceController extends Controller
                                 ->join('groups AS g', 'm.group_id', '=', 'g.id')
                                 ->where('g.program_id', $request->input('id'))
                                 ->select(['m.id'])
-                            )->count('a.mentee_id');
+                            )->distinct()->count('a.mentee_id');
 
             $activities[$i]->mentees_count = $mentees_count;
             $activities[$i]->mentees_total = $mentees_total;
@@ -153,7 +153,8 @@ class AbsenceController extends Controller
     }
 
     public function getAbsenceList($activity_id){
-        $activity = Activity::where('id', $activity_id)->get(['id', 'name', 'date', 'program_id'])->first();
+        $activity = Activity::findOrFail($activity_id);
+
         $groups = Group::where('program_id', $activity->program_id)
             ->join('mentor', 'groups.mentor_id', '=', 'mentor.id')
             ->get(['groups.id', 'groups.mentor_id', 'mentor.fullname', 'groups.name']);
@@ -163,12 +164,12 @@ class AbsenceController extends Controller
 
         for($i=0; $i<count($groups); $i++){
             $mentees = DB::table('mentee AS m')
-                ->leftJoin('absence AS a', function($join) use ($activity_id) {
-                    $join->on('m.id', '=', 'a.mentee_id')
-                        ->where('a.activity_id', $activity_id);
-                })
-                ->where('m.group_id', $groups[$i]->id)
-                ->get(['m.id', 'm.name', 'm.status', 'a.present', 'a.id AS absence_id', 'a.information']);
+            ->leftJoin(DB::raw('(SELECT DISTINCT mentee_id, present, information FROM absence WHERE activity_id = ' . $activity_id . ') AS a'), function($join) {
+                $join->on('m.id', '=', 'a.mentee_id');
+            })
+            ->where('m.group_id', $groups[$i]->id)
+            ->select('m.id', 'm.name', 'm.status', 'a.present', 'a.information')
+            ->get();
 
             for($j=0; $j<count($mentees); $j++){
                 if($mentees[$j]->present == 1){
@@ -225,23 +226,25 @@ class AbsenceController extends Controller
 
     public function inputAbsence(Request $request){
         $absence_list = $request->input('absence_list');
-        for($i=0; $i<count($absence_list); $i++){
-            if($absence_list[$i]['absence_id'] == null){
+
+        foreach ($absence_list as $absence_item) {
+            $existingAbsence = Absence::where('activity_id', $request->input('activity_id'))
+                ->where('mentee_id', $absence_item['id'])
+                ->first();
+
+            if ($existingAbsence) {
+                $existingAbsence->update([
+                    'present' => $absence_item['present'],
+                    'information' => $absence_item['information'],
+                    'updated_at' => now()
+                ]);
+            } else {
                 Absence::insert([
                     'activity_id' => $request->input('activity_id'),
-                    'mentee_id' => $absence_list[$i]['id'],
-                    'present' => $absence_list[$i]['present'],
-                    'information' => $absence_list[$i]['information'],
-                    'created_at' => date_create()
-                ]);
-            }else{
-                Absence::where('id', $absence_list[$i]['absence_id'])
-                ->update([
-                    'activity_id' => $request->input('activity_id'),
-                    'mentee_id' => $absence_list[$i]['id'],
-                    'present' => $absence_list[$i]['present'],
-                    'information' => $absence_list[$i]['information'],
-                    'updated_at' => date_create()
+                    'mentee_id' => $absence_item['id'],
+                    'present' => $absence_item['present'],
+                    'information' => $absence_item['information'],
+                    'created_at' => now()
                 ]);
             }
         }
@@ -340,6 +343,7 @@ class AbsenceController extends Controller
         $excelFile = 'exports/[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
         Excel::store($export, $excelFile);
         $storagePath = Storage::path($excelFile);
+        dd($storagePath);
 
         return response()->download($storagePath, '[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
