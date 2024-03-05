@@ -316,34 +316,50 @@ class AbsenceController extends Controller
         if($request->input('mentor_id') == null){
             $mentees = Mentee::select('mentee.id', 'mentee.name')
                 ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
-                ->leftJoin('absence', 'mentee.id', '=', 'absence.mentee_id')
                 ->groupBy('mentee.id')
+                ->orderBy('mentee.name')
                 ->get();
         }else{
             $mentees = Mentee::select('mentee.id', 'mentee.name')
                 ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
                 ->whereIn('group_id', Group::select('id')->where('mentor_id', $request->input('mentor_id')))
-                ->leftJoin('absence', 'mentee.id', '=', 'absence.mentee_id')
                 ->groupBy('mentee.id')
+                ->orderBy('mentee.name')
                 ->get();
         }
 
-        foreach($mentees as $index => $data){
-            $mentees[$index]['absence_list'] = DB::table('activity')
-                ->leftJoin('absence', function($join) use ($data){
-                    $join->on('activity.id','=','absence.activity_id')
-                        ->where('absence.mentee_id', '=', $data['id']);
-                })
-                ->orderBy('activity.id')
-                ->select('activity.name', DB::raw('COALESCE(absence.present, 0) as present'))
+        foreach ($mentees as $index => $data) {
+            $menteeId = $data['id'];
+
+            $activities = DB::table('activity')
+                ->where('program_id', $program_id)
+                ->select('id', 'name')
+                ->orderBy('id')
                 ->get();
+
+            $absences = DB::table('absence')
+                ->select('activity_id', 'present')
+                ->where('mentee_id', '=', $menteeId)
+                ->distinct()
+                ->get()
+                ->keyBy('activity_id');
+
+            $absenceList = [];
+            foreach ($activities as $activity) {
+                $present = isset($absences[$activity->id]) ? $absences[$activity->id]->present : 0;
+                $absenceList[] = [
+                    'name' => $activity->name,
+                    'present' => $present
+                ];
+            }
+
+            $mentees[$index]['absence_list'] = $absenceList;
         }
 
         $export = new AbsenceExport($mentees);
         $excelFile = 'exports/[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx';
         Excel::store($export, $excelFile);
         $storagePath = Storage::path($excelFile);
-        dd($storagePath);
 
         return response()->download($storagePath, '[Absence] ' . preg_replace('/[\/:*?"<>|]/', '', $program->name) . ' - ' . $program->batch . '.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

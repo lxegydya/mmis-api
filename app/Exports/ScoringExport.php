@@ -5,6 +5,7 @@ namespace App\Exports;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ScoringExport implements FromCollection, WithHeadings, WithStyles
@@ -29,8 +30,8 @@ class ScoringExport implements FromCollection, WithHeadings, WithStyles
             $menteeName = $mentee['name'];
 
             foreach ($mentee['scoring_list'] as $scoring) {
-                $assignmentName = $scoring->name;
-                $score = $scoring->score;
+                $assignmentName = $scoring['name'];
+                $score = $scoring['score'];
 
                 if (!isset($menteeData[$menteeName])) {
                     $menteeData[$menteeName] = ['Nama' => $menteeName];
@@ -77,15 +78,19 @@ class ScoringExport implements FromCollection, WithHeadings, WithStyles
         $sheet->getStyle($headerRow)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
         $sheet->getStyle($headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle($headerRow)->getFont()->setBold(true);
-        $sheet->getRowDimension(1)->setRowHeight(30);
 
         // Pengaturan Baris
-        foreach (range('A', $sheet->getHighestDataColumn()) as $index => $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-            if($index > 0){
-                $sheet->getStyle($column)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-            }
+        $sheet->getColumnDimension('A')->setAutoSize(true);
+        for ($i = 2; $i <= Coordinate::columnIndexFromString($sheet->getHighestDataColumn()); $i++) {
+            $column = Coordinate::stringFromColumnIndex($i);
+            $sheet->getColumnDimension($column)->setWidth(15);
         }
+
+        $sheet->getStyle('B1:' . $sheet->getHighestDataColumn() . '1')->getAlignment()->setWrapText(true);
+        $highestRow = $sheet->getHighestDataRow();
+        $range = 'B1:' . $sheet->getHighestDataColumn() . $highestRow;
+
+        $sheet->getStyle($range)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         for($i=2; $i <= $highestRow; $i++){
             $sheet->getRowDimension($i)->setRowHeight(25);

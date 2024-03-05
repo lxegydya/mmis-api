@@ -195,27 +195,42 @@ class ScoringController extends Controller
         if($request->input('mentor_id') == null){
             $mentees = Mentee::select('mentee.id', 'mentee.name')
                 ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
-                ->leftJoin('scoring', 'mentee.id', '=', 'scoring.mentee_id')
                 ->groupBy('mentee.id')
+                ->orderBy('mentee.name')
                 ->get();
         }else{
             $mentees = Mentee::select('mentee.id', 'mentee.name')
                 ->whereIn('group_id', Group::select('id')->where('program_id', $program_id))
                 ->whereIn('group_id', Group::select('id')->where('mentor_id', $request->input('mentor_id')))
-                ->leftJoin('scoring', 'mentee.id', '=', 'scoring.mentee_id')
                 ->groupBy('mentee.id')
+                ->orderBy('mentee.name')
                 ->get();
         }
 
-        foreach($mentees as $index => $data){
-            $mentees[$index]['scoring_list'] = DB::table('assignment')
-                ->leftJoin('scoring', function($join) use ($data){
-                    $join->on('assignment.id','=','scoring.assignment_id')
-                        ->where('scoring.mentee_id', '=', $data['id']);
-                })
-                ->orderBy('assignment.id')
-                ->select('assignment.name', DB::raw('COALESCE(scoring.score, 0) as score'))
+        foreach ($mentees as $index => $data) {
+            $menteeId = $data['id'];
+
+            $assignments = Assignment::select('id', 'name')
+                ->where('program_id', $program_id)
+                ->orderBy('id')
                 ->get();
+
+            $scorings = Scoring::select('assignment_id', 'score')
+                ->where('mentee_id', '=', $menteeId)
+                ->distinct()
+                ->get()
+                ->keyBy('assignment_id');
+
+            $scoringList = [];
+            foreach ($assignments as $assignment) {
+                $score = isset($scorings[$assignment->id]) ? $scorings[$assignment->id]->score : 0;
+                $scoringList[] = [
+                    'name' => $assignment->name,
+                    'score' => $score
+                ];
+            }
+
+            $mentees[$index]['scoring_list'] = $scoringList;
         }
 
         $export = new ScoringExport($mentees);

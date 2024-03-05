@@ -29,8 +29,8 @@ class AbsenceExport implements FromCollection, WithHeadings, WithStyles
             $menteeName = $mentee['name'];
 
             foreach ($mentee['absence_list'] as $absence) {
-                $activityName = $absence->name;
-                $presenceStatus = $absence->present == 1 ? 'Hadir' : 'Tidak Hadir';
+                $activityName = $absence['name'];
+                $presenceStatus = $absence['present'] == 1 ? 'Hadir' : 'Tidak Hadir';
 
                 if (!isset($menteeData[$menteeName])) {
                     $menteeData[$menteeName] = ['Nama' => $menteeName];
